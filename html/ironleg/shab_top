@@ -1,0 +1,29 @@
+<html>
+<head>
+<META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+<meta HTTP-EQUIV="Expires" CONTENT="0">
+<meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<meta HTTP-EQUIV="Cache-Control" CONTENT="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<script src="../jquery.js"></script>
+<!-- <LINK href="../style.css" rel=stylesheet  type=text/css> -->
+<title>admin</title>
+</head>
+
+<body onload="load()" onunload="GUnload()">
+<table align="center" cellspacing="1" cellpadding="5" width="1024"  bgcolor="#000080" border="0">
+<tr>
+  <td width="150" rowspan="2" align="center"><h3><font color="#ffffff">AzEduNet</font></h3></td>
+  <td bgcolor="#F5FFFA" align="right" width="874"><h3><small><a href="city.pl">City</a> :: <a href="ats.pl">ATS </a> :: <a href="ats
+_eq.pl">ATS Equipment</a> :: <a href="connectors.pl">Connectors</a> :: <a href="schools.pl">Schools</a> :: <a href="equipments.pl">Equipment</a> :: <a href="reports.pl">Reports</a>
+</small></h3> </td>
+
+</tr>
+<tr>
+<td  bgcolor="#F5FFFA" align="right"><h3><small><a href="reports.pl?action=dhcp_requests_registered">DHCP_requests</a> :: <a href="tarifs.pl">Tarifs</a> :: <a href="clients_t
+ype.pl">Clients Type</a> :: <a href="providers.pl">Providers</a> :: <a href="connections_type.pl">Connection types</a> :: <a href="man
+ufacturers.pl">Manufacturers</a> :: <a href="equipments_type.pl">Equipment Type </a></small></h3></td>
+</tr>
+
+<tr>
+  <td bgcolor="#F5FFFA" height="587" colspan="2" valign="top">
