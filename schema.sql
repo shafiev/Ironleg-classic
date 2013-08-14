@@ -2188,3 +2188,468 @@ end;
 /
 
 
+--------------------------------------------------------
+--  File created - Wednesday-August-14-2013   
+--------------------------------------------------------
+--------------------------------------------------------
+--  DDL for View DHCP_REQUESTS_V
+--------------------------------------------------------
+
+  CREATE OR REPLACE FORCE VIEW "RADIUS_IRONLEG"."DHCP_REQUESTS_V" ("ID", "REQ_DATE", "SLOT", "PORT", "MAC", "GW_IP", "IP", "REMOTE_IP") AS 
+  select "ID","REQ_DATE","SLOT","PORT","MAC","GW_IP","IP","REMOTE_IP"
+from ats_eq_info
+where (req_date,mac) in
+(
+select max(req_date), mac 
+from ats_eq_info
+group by mac)
+order by req_date desc;
+--------------------------------------------------------
+--  DDL for View MAC2IP_V
+--------------------------------------------------------
+
+  CREATE OR REPLACE FORCE VIEW "RADIUS_IRONLEG"."MAC2IP_V" ("MAC", "IP", "ATS_EQ_PORT_ID") AS 
+  SELECT se.mac, aep.ip, aep.id as ats_eq_port_id
+     FROM    ironleg.ats_eq_ports aep
+          INNER JOIN
+             ironleg.schools_eq se
+          ON (    aep.school_id = se.school_id
+              AND se.connected = 1
+              AND se.mac IS NOT NULL);
+--------------------------------------------------------
+--  DDL for View ISG_CLIENTS_V
+--------------------------------------------------------
+
+  CREATE OR REPLACE FORCE VIEW "RADIUS_IRONLEG"."ISG_CLIENTS_V" ("IP", "SCHOOL_ID", "TARIF_NAME", "PRICE", "LIMITED", "DOWNLOAD", "UPLOAD") AS 
+  SELECT aep.ip,
+          aep.school_id,
+          aep.tarif_name,
+          th.price,
+          t.limited,
+          t.download,
+          t.upload
+     FROM ironleg.ats_eq_ports_v aep
+          INNER JOIN ironleg.tarifs t
+             ON aep.tarif_id = t.id
+          LEFT JOIN (SELECT tarif_id, price
+                       FROM ironleg.tarifs_history
+                      WHERE (tarif_id, tarif_date) IN
+                               (  SELECT tarif_id, MAX (tarif_date)
+                                    FROM ironleg.tarifs_history
+                                   WHERE tarif_date < SYSDATE
+                                GROUP BY tarif_id)) th
+             ON t.id = th.tarif_id
+    WHERE state = 1;
+
+
+--------------------------------------------------------
+--  File created - Wednesday-August-14-2013   
+--------------------------------------------------------
+--------------------------------------------------------
+--  DDL for Table ATS_EQ_INFO
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."ATS_EQ_INFO" 
+   (	"ID" NUMBER, 
+	"REQ_DATE" DATE DEFAULT sysdate, 
+	"SLOT" NUMBER(3,0), 
+	"PORT" NUMBER(3,0), 
+	"MAC" NVARCHAR2(30), 
+	"GW_IP" NVARCHAR2(30), 
+	"IP" NVARCHAR2(30), 
+	"REMOTE_IP" NVARCHAR2(20)
+   ) SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table NAS
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."NAS" 
+   (	"ID" NUMBER(*,0), 
+	"NASNAME" VARCHAR2(128 BYTE), 
+	"SHORTNAME" VARCHAR2(32 BYTE), 
+	"TYPE" VARCHAR2(30 BYTE), 
+	"PORTS" NUMBER(*,0), 
+	"SECRET" VARCHAR2(60 BYTE), 
+	"SERVER" VARCHAR2(64 BYTE), 
+	"COMMUNITY" VARCHAR2(50 BYTE), 
+	"DESCRIPTION" VARCHAR2(200 BYTE)
+   ) SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADACCT
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADACCT" 
+   (	"RADACCTID" NUMBER(*,0), 
+	"ACCTSESSIONID" VARCHAR2(96 BYTE), 
+	"ACCTUNIQUEID" VARCHAR2(32 BYTE), 
+	"USERNAME" VARCHAR2(64 BYTE), 
+	"GROUPNAME" VARCHAR2(32 BYTE), 
+	"REALM" VARCHAR2(30 BYTE), 
+	"NASIPADDRESS" VARCHAR2(15 BYTE), 
+	"NASPORTID" VARCHAR2(32 BYTE), 
+	"NASPORTTYPE" VARCHAR2(32 BYTE), 
+	"ACCTSTARTTIME" TIMESTAMP (6) WITH TIME ZONE, 
+	"ACCTSTOPTIME" TIMESTAMP (6) WITH TIME ZONE, 
+	"ACCTSESSIONTIME" NUMBER(19,0), 
+	"ACCTAUTHENTIC" VARCHAR2(32 BYTE), 
+	"CONNECTINFO_START" VARCHAR2(50 BYTE), 
+	"CONNECTINFO_STOP" VARCHAR2(50 BYTE), 
+	"ACCTINPUTOCTETS" NUMBER(19,0), 
+	"ACCTOUTPUTOCTETS" NUMBER(19,0), 
+	"CALLEDSTATIONID" VARCHAR2(50 BYTE), 
+	"CALLINGSTATIONID" VARCHAR2(50 BYTE), 
+	"ACCTTERMINATECAUSE" VARCHAR2(32 BYTE), 
+	"SERVICETYPE" VARCHAR2(32 BYTE), 
+	"FRAMEDPROTOCOL" VARCHAR2(32 BYTE), 
+	"FRAMEDIPADDRESS" VARCHAR2(15 BYTE), 
+	"ACCTSTARTDELAY" NUMBER(12,0), 
+	"ACCTSTOPDELAY" NUMBER(12,0), 
+	"XASCENDSESSIONSVRKEY" VARCHAR2(10 BYTE)
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADCHECK
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADCHECK" 
+   (	"ID" NUMBER(*,0), 
+	"USERNAME" VARCHAR2(30 BYTE), 
+	"ATTRIBUTE" VARCHAR2(64 BYTE), 
+	"OP" VARCHAR2(2 BYTE), 
+	"VALUE" VARCHAR2(40 BYTE)
+   ) SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADGROUPCHECK
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADGROUPCHECK" 
+   (	"ID" NUMBER(*,0), 
+	"GROUPNAME" VARCHAR2(20 BYTE), 
+	"ATTRIBUTE" VARCHAR2(64 BYTE), 
+	"OP" CHAR(2 BYTE), 
+	"VALUE" VARCHAR2(40 BYTE)
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADGROUPREPLY
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADGROUPREPLY" 
+   (	"ID" NUMBER(*,0), 
+	"GROUPNAME" VARCHAR2(20 BYTE), 
+	"ATTRIBUTE" VARCHAR2(64 BYTE), 
+	"OP" CHAR(2 BYTE), 
+	"VALUE" VARCHAR2(40 BYTE)
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADREPLY
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADREPLY" 
+   (	"ID" NUMBER(*,0), 
+	"USERNAME" VARCHAR2(30 BYTE), 
+	"ATTRIBUTE" VARCHAR2(64 BYTE), 
+	"OP" CHAR(2 BYTE), 
+	"VALUE" VARCHAR2(40 BYTE)
+   ) SEGMENT CREATION IMMEDIATE 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Table RADUSERGROUP
+--------------------------------------------------------
+
+  CREATE TABLE "RADIUS_IRONLEG"."RADUSERGROUP" 
+   (	"ID" NUMBER(*,0), 
+	"USERNAME" VARCHAR2(30 BYTE), 
+	"GROUPNAME" VARCHAR2(30 BYTE)
+   ) SEGMENT CREATION DEFERRED 
+  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index ATS_EQ_INFO_ID_PK
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."ATS_EQ_INFO_ID_PK" ON "RADIUS_IRONLEG"."ATS_EQ_INFO" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0035721
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0035721" ON "RADIUS_IRONLEG"."NAS" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033826
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033826" ON "RADIUS_IRONLEG"."RADACCT" ("RADACCTID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index RADACCT_IDX1
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."RADACCT_IDX1" ON "RADIUS_IRONLEG"."RADACCT" ("ACCTSESSIONID", "USERNAME", SYS_EXTRACT_UTC("ACCTSTARTTIME"), SYS_EXTRACT_UTC("ACCTSTOPTIME"), "NASIPADDRESS", "FRAMEDIPADDRESS") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033829
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033829" ON "RADIUS_IRONLEG"."RADCHECK" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033832
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033832" ON "RADIUS_IRONLEG"."RADGROUPCHECK" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033833
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033833" ON "RADIUS_IRONLEG"."RADGROUPCHECK" ("GROUPNAME") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033836
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033836" ON "RADIUS_IRONLEG"."RADGROUPREPLY" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033837
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033837" ON "RADIUS_IRONLEG"."RADGROUPREPLY" ("GROUPNAME") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033840
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033840" ON "RADIUS_IRONLEG"."RADREPLY" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index RADREPLY_IDX1
+--------------------------------------------------------
+
+  CREATE INDEX "RADIUS_IRONLEG"."RADREPLY_IDX1" ON "RADIUS_IRONLEG"."RADREPLY" ("USERNAME") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033842
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033842" ON "RADIUS_IRONLEG"."RADUSERGROUP" ("ID") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  DDL for Index SYS_C0033843
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "RADIUS_IRONLEG"."SYS_C0033843" ON "RADIUS_IRONLEG"."RADUSERGROUP" ("USERNAME") 
+  PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS" ;
+--------------------------------------------------------
+--  Constraints for Table ATS_EQ_INFO
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."ATS_EQ_INFO" ADD CONSTRAINT "ATS_EQ_INFO_ID_PK" PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table NAS
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."NAS" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADACCT
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADACCT" MODIFY ("ACCTSESSIONID" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADACCT" MODIFY ("USERNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADACCT" MODIFY ("NASIPADDRESS" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADACCT" ADD PRIMARY KEY ("RADACCTID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADCHECK
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADCHECK" MODIFY ("USERNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADCHECK" MODIFY ("OP" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADCHECK" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADGROUPCHECK
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPCHECK" MODIFY ("GROUPNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPCHECK" MODIFY ("OP" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPCHECK" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPCHECK" ADD UNIQUE ("GROUPNAME")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADGROUPREPLY
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPREPLY" MODIFY ("GROUPNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPREPLY" MODIFY ("OP" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPREPLY" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADGROUPREPLY" ADD UNIQUE ("GROUPNAME")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADREPLY
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADREPLY" MODIFY ("USERNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADREPLY" MODIFY ("OP" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADREPLY" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS 
+  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645
+  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table RADUSERGROUP
+--------------------------------------------------------
+
+  ALTER TABLE "RADIUS_IRONLEG"."RADUSERGROUP" MODIFY ("USERNAME" NOT NULL ENABLE);
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADUSERGROUP" ADD PRIMARY KEY ("ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+ 
+  ALTER TABLE "RADIUS_IRONLEG"."RADUSERGROUP" ADD UNIQUE ("USERNAME")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS NOCOMPRESS LOGGING
+  TABLESPACE "TABLES_TS"  ENABLE;
+--------------------------------------------------------
+--  DDL for Trigger ATS_EQ_INFO_BI_TRG
+--------------------------------------------------------
+
+  CREATE OR REPLACE TRIGGER "RADIUS_IRONLEG"."ATS_EQ_INFO_BI_TRG" 
+before insert on ats_eq_info for each row
+begin
+    select ats_eq_info_id_seq.nextval into :new.id from dual;
+end;
+/
+ALTER TRIGGER "RADIUS_IRONLEG"."ATS_EQ_INFO_BI_TRG" ENABLE;
+--------------------------------------------------------
+--  DDL for Trigger RADACCT_SERIALNUMBER
+--------------------------------------------------------
+
+  CREATE OR REPLACE TRIGGER "RADIUS_IRONLEG"."RADACCT_SERIALNUMBER" 
+        BEFORE INSERT OR UPDATE OF radacctid ON radacct
+        FOR EACH ROW
+        BEGIN
+                if ( :new.radacctid = 0 or :new.radacctid is null ) then
+                        SELECT radacct_seq.nextval into :new.radacctid from dual;
+                end if;
+        END;
+/
+ALTER TRIGGER "RADIUS_IRONLEG"."RADACCT_SERIALNUMBER" ENABLE;
+--------------------------------------------------------
+--  DDL for Trigger RADCHECK_SERIALNUMBER
+--------------------------------------------------------
+
+  CREATE OR REPLACE TRIGGER "RADIUS_IRONLEG"."RADCHECK_SERIALNUMBER" 
+        BEFORE INSERT OR UPDATE OF id ON radcheck
+        FOR EACH ROW
+        BEGIN
+                if ( :new.id = 0 or :new.id is null ) then
+                        SELECT radcheck_seq.nextval into :new.id from dual;
+                end if;
+        END;
+/
+ALTER TRIGGER "RADIUS_IRONLEG"."RADCHECK_SERIALNUMBER" ENABLE;
+--------------------------------------------------------
+--  DDL for Trigger RADREPLY_SERIALNUMBER
+--------------------------------------------------------
+
+  CREATE OR REPLACE TRIGGER "RADIUS_IRONLEG"."RADREPLY_SERIALNUMBER" 
+        BEFORE INSERT OR UPDATE OF id ON radreply
+        FOR EACH ROW
+        BEGIN
+                if ( :new.id = 0 or :new.id is null ) then
+                        SELECT radreply_seq.nextval into :new.id from dual;
+                end if;
+        END;
+/
+ALTER TRIGGER "RADIUS_IRONLEG"."RADREPLY_SERIALNUMBER" ENABLE;
+--------------------------------------------------------
+--  DDL for Trigger RADUSERGROUP_SERIALNUMBER
+--------------------------------------------------------
+
+  CREATE OR REPLACE TRIGGER "RADIUS_IRONLEG"."RADUSERGROUP_SERIALNUMBER" 
+        BEFORE INSERT OR UPDATE OF id ON radusergroup
+        FOR EACH ROW
+        BEGIN
+                if ( :new.id = 0 or :new.id is null ) then
+                        SELECT radusergroup_seq.nextval into :new.id from dual;
+                end if;
+        END;
+/
+ALTER TRIGGER "RADIUS_IRONLEG"."RADUSERGROUP_SERIALNUMBER" ENABLE;
+
+
